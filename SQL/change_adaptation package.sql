@@ -152,6 +152,7 @@ create or replace package body change_adaptation as
   CONST_DATASET_ID                types.tp_id%type := 'CAD0000004';
   CONST_DATAHIGHWAYLEVEL_ID       types.tp_id%type := 'CAD0000005';
   CONST_ALTERNATIVE_DATASOURCES   types.tp_id%type := 'CAD0000006';
+  CONST_ALTERNATIVE_DATAIEMS      types.tp_id%type := 'CAD0000007';
 
   -- Data highway level
   CONST_FIRST_DATA_HIGHWAY_LEVEL  datahighwaylevel.hl_id%type := 2;
@@ -410,7 +411,8 @@ create or replace package body change_adaptation as
     select count(1)
       into v_added_count
       from changeadaptationadditionaldata caad
-     where caad.caad_change_id = in_change_id;
+     where caad.caad_change_id = in_change_id
+     and caad.caad_data_type_id=CONST_DATASET_EXAMPLE;
 
     if v_added_count > 0 then
       v_is_added := true;    
@@ -621,13 +623,22 @@ create or replace package body change_adaptation as
   end alternative_data_sources_added;  
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   function alternative_data_items_added (in_change_id in change.ch_id%type) return boolean is
-  
-    v_type varchar2(20);
-    v_fulfilled boolean default false;
+    v_added_count number;
+    v_is_added boolean default false;
   begin
-    
+    select count(1)
+      into v_added_count
+      from changeadaptationadditionaldata caad
+     where caad.caad_change_id = in_change_id
+     and caad.caad_data_type_id=CONST_ALTERNATIVE_DATAIEMS;
 
-    return v_fulfilled;    
+    if v_added_count > 0 then
+      v_is_added := true;    
+    end if;
+
+      dbms_output.put_line('in function alternative data items added');
+
+    return v_is_added;   
   end alternative_data_items_added;
   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

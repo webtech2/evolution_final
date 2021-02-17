@@ -424,6 +424,7 @@ create or replace PACKAGE BODY POSTDOC_METADATA AS
             select tp_id into v_st_type from types where tp_type='New';
             insert into change (CH_ID, CH_CHANGETYPE_ID, CH_STATUSTYPE_ID, CH_DATAITEM_ID, CH_DATETIME) 
                 values (CHANGE_CH_ID_SEQ.nextval, v_ch_type, v_st_type, v_meta_col.di_id, sysdate);        
+            update dataitem set di_deleted = sysdate where di_id=v_meta_col.di_id;
             commit;
         end loop;
 

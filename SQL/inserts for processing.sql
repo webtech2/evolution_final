@@ -96,8 +96,11 @@ INSERT INTO types VALUES (
     'Alternative data sources',
     'CAD0000000'
 );
-
-
+INSERT INTO types VALUES (
+    'CAD0000007',
+    'Alternative data items',
+    'CAD0000000'
+);
 
 
 INSERT INTO types VALUES (

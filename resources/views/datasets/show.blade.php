@@ -53,7 +53,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        @each('partials.dataitem_table', $dset->dataItems, 'item')
+                        @each('partials.dataitem_table', $dset->dataItems()->whereNull('di_deleted')->get(), 'item')
                         </tbody>
                     </table>
                     @elseif ($dset->formatType->parentType->tp_type == 'Unstructured data set')

@@ -23,15 +23,20 @@ class ChangeAdaptationAdditionalData extends Model
     public function buildData() 
     {
         $data = $this->caad_data;
-        if (strpos($data,'Format:') !== false) {
-            $format = substr($data,strpos($data,'Format:')+8,10);
-            $type = Type::where('tp_id',$format)->first()->tp_type;
-            $data = str_replace($format, $type, $data);
-        }
-        if (strpos($data,'Velocity:') !== false) {
-            $velocity = substr($data,strpos($data,'Velocity:')+10,10);
-            $type = Type::where('tp_id',$velocity)->first()->tp_type;
-            $data = str_replace($velocity, $type, $data);
+        if ($this->caad_data_type_id = 'CAD0000007') {
+            $dataitem = DataItem::find($data);
+            $data = $dataitem->dataset->datasource->so_name.'.'.$dataitem->dataset->ds_name.'.'.$dataitem->di_name;
+        } else {
+            if (strpos($data,'Format:') !== false) {
+                $format = substr($data,strpos($data,'Format:')+8,10);
+                $type = Type::where('tp_id',$format)->first()->tp_type;
+                $data = str_replace($format, $type, $data);
+            }
+            if (strpos($data,'Velocity:') !== false) {
+                $velocity = substr($data,strpos($data,'Velocity:')+10,10);
+                $type = Type::where('tp_id',$velocity)->first()->tp_type;
+                $data = str_replace($velocity, $type, $data);
+            }
         }
         return $data;
     }

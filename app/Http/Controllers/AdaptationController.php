@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Change;
 use App\ChangeAdaptationProcess;
+use App\DataSource;
 use App\Type;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use PDO;
 use Illuminate\Validation\Rule;
+use PDO;
 
 class AdaptationController extends Controller
 {
@@ -108,7 +109,8 @@ class AdaptationController extends Controller
         $types = Type::where('tp_parenttype_id','DST0000000')
                 ->where('tp_id','<>','FMT0000000')->get();
         $velocities = Type::where('tp_parenttype_id','VLT0000000')->get();
-        return view('changes.add_data', compact('change','object','dtypes','types','velocities'));
+        $sources = DataSource::all();
+        return view('changes.add_data', compact('change','object','dtypes','types','velocities','sources'));
     }  
     
      /**
@@ -119,65 +121,105 @@ class AdaptationController extends Controller
      */
     public function storeAdditionalData(Request $request)
     {
-        $ds = $request->datasource;
+        $insert = false;
         
-        $validatedData = $request->validate([
-            'change' => [
-                'required',
-                'exists:change,ch_id',
-            ],
-            'type' => [
-                'required',
-                'exists:types,tp_id',
-                'starts_with:CAD',
-            ],
-            'file' => [
-                'file',
-                Rule::requiredIf($request->format != 'FMT0000031'),           
-            ],
-            'table_name' => [
-                'alpha_num',
-                Rule::requiredIf($request->format == 'FMT0000031'),           
-            ],   
-            'ds_name' => [
-                'required',
-                Rule::unique('dataset','ds_name')
-                    ->where(function ($query) use ($ds) {
-                        return $query->where('ds_datasource_id', $ds)->whereNull('ds_deleted');
-                    })
-            ],
-            'velocity' => [
-                'required',
-                'exists:types,tp_id',
-                'starts_with:VLT',
-            ],
-            'frequency' => [
-                'required',
-            ],
-                            
-        ]); 
+        switch ($request->type) {
+            case 'CAD0000001':
+                $ds = $request->datasource;
         
-        $data = 'Format: '.$request->format;
-        
-        if ($request->hasFile('file') && $request->file('file')->isValid()) {
-            $path = $request->file('file')->store('files');
-            $data .= '; Path: '.$path; 
+                $validatedData = $request->validate([
+                    'change' => [
+                        'required',
+                        'exists:change,ch_id',
+                    ],
+                    'type' => [
+                        'required',
+                        'exists:types,tp_id',
+                        'starts_with:CAD',
+                    ],
+                    'file' => [
+                        'file',
+                        Rule::requiredIf($request->format != 'FMT0000031'),           
+                    ],
+                    'table_name' => [
+                        'alpha_num',
+                        Rule::requiredIf($request->format == 'FMT0000031'),           
+                    ],   
+                    'ds_name' => [
+                        'required',
+                        Rule::unique('dataset','ds_name')
+                            ->where(function ($query) use ($ds) {
+                                return $query->where('ds_datasource_id', $ds)->whereNull('ds_deleted');
+                            })
+                    ],
+                    'velocity' => [
+                        'required',
+                        'exists:types,tp_id',
+                        'starts_with:VLT',
+                    ],
+                    'frequency' => [
+                        'required',
+                    ],
+
+                ]); 
+
+                $data = 'Format: '.$request->format;
+
+                if ($request->hasFile('file') && $request->file('file')->isValid()) {
+                    $path = $request->file('file')->store('files');
+                    $data .= '; Path: '.$path; 
+                }
+
+                if ($request->table_name) {
+                    $data .= '; Table name: '.$request->table_name; 
+                }
+
+                $data .= '; Data source name: '.$request->ds_name;
+                $data .= '; Data source description: '.$request->ds_desc;
+                $data .= '; Velocity: '.$request->velocity;
+                $data .= '; Frequency: '.$request->frequency;
+                
+                $insert = true;
+                break;
+//-------------------------------------------------------------------------------------                
+            case 'CAD0000007':
+                $validatedData = $request->validate([
+                    'change' => [
+                        'required',
+                        'exists:change,ch_id',
+                    ],
+                    'type' => [
+                        'required',
+                        'exists:types,tp_id',
+                        'starts_with:CAD',
+                    ],
+                    'source' => [
+                        'required',
+                        'exists:datasource,so_id',
+                    ],
+                    'dataset' => [
+                        'required',
+                        'exists:dataset,ds_id',
+                    ],
+                    'dataitem' => [
+                        'required',
+                        'exists:dataitem,di_id',
+                        'not_in:'.Change::find($request->change)->ch_dataitem_id,
+                    ],
+
+                ]); 
+                
+                $data = $request->dataitem;
+                
+                $insert = true;
+                break;
         }
         
-        if ($request->table_name) {
-            $data .= '; Table name: '.$request->table_name; 
-        }
-        
-        $data .= '; Data source name: '.$request->ds_name;
-        $data .= '; Data source description: '.$request->ds_desc;
-        $data .= '; Velocity: '.$request->velocity;
-        $data .= '; Frequency: '.$request->frequency;
-        
-        $temp = $request->all();
-        
-        if ($request->type == 'CAD0000001') {
+        if ($insert) {
+            $temp = $request->all();
+
             $pdo = DB::getPdo();
-            $stmt = $pdo->prepare("begin change_adaptation.add_dataset_example("
+            $stmt = $pdo->prepare("begin change_adaptation.add_additional_data("
                     . "in_change_id=>:in_change_id, "
                     . "in_data_type=>:in_data_type, "
                     . "in_data=>:in_data); end;");
@@ -185,9 +227,9 @@ class AdaptationController extends Controller
             $stmt->bindParam(':in_data_type', $temp['type'], PDO::PARAM_STR);
             $stmt->bindParam(':in_data', $data);
             $stmt->execute();            
+
+            return redirect()->action('ChangeController@show', $temp['change'])
+                ->withSuccess('Change adaptation data successfully added!');       
         }
-        
-        return redirect()->action('ChangeController@show', $temp['change'])
-                ->withSuccess('Change adaptation data successfully added!');
     }
 }

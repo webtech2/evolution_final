@@ -34,7 +34,7 @@
    
                             <div class="col-md-6">
                                 <select id="dtype" class="type-select form-control @error('type') is-invalid @enderror" 
-                                        name="type" value="{{ old('type') }}" required autocomplete="type" autofocus>
+                                        name="type" value="{{ old('type') }}" autocomplete="type" autofocus>
                                     @foreach ($dtypes as $type)
                                     <option value="{{ $type->tp_id }}" {{ (old('type') == $type->tp_id ? "selected":"") }}>{{ $type->tp_type}}</option>
                                     @endforeach
@@ -47,7 +47,8 @@
                                 @enderror
                             </div>
                         </div>
-
+<!------------------------------------------------------------------------------------------------------->
+                        <fieldset id='CAD0000001'>
                         <div class="form-group row">
                             <label for="ds_name" class="col-md-4 col-form-label text-md-right">Dataset name</label>
 
@@ -80,7 +81,7 @@
                             <label for="velocity" class="col-md-4 col-form-label text-md-right">Velocity</label>
    
                             <div class="col-md-6">
-                                <select id="velocity" class="form-control @error('velocity') is-invalid @enderror" name="velocity" value="{{ old('velocity') }}" required autocomplete="velocity" >
+                                <select id="velocity" class="form-control @error('velocity') is-invalid @enderror" name="velocity" value="{{ old('velocity') }}"  autocomplete="velocity" >
                                     @foreach ($velocities as $velocity)
                                     <option value="{{ $velocity->tp_id }}">{{ $velocity->tp_type}}</option>
                                     @endforeach
@@ -98,7 +99,7 @@
                             <label for="frequency" class="col-md-4 col-form-label text-md-right">Frequency</label>
 
                             <div class="col-md-6">
-                                <textarea id="frequency" rows="5" class="form-control @error('frequency') is-invalid @enderror" name="frequency" required autocomplete="frequency">{{ old('frequency') }}</textarea>
+                                <textarea id="frequency" rows="5" class="form-control @error('frequency') is-invalid @enderror" name="frequency"  autocomplete="frequency">{{ old('frequency') }}</textarea>
 
                                 @error('frequency')
                                     <span class="invalid-feedback" role="alert">
@@ -112,7 +113,7 @@
                             <label for="type" class="col-md-4 col-form-label text-md-right">Data set type</label>
    
                             <div class="col-md-6">
-                                <select id="type" class="type-select form-control @error('type') is-invalid @enderror" value="{{ old('type') }}" required autocomplete="type" autofocus>
+                                <select id="type" class="type-select form-control @error('type') is-invalid @enderror" value="{{ old('type') }}"  autocomplete="type" autofocus>
                                     @foreach ($types as $type)
                                     <option value="{{ $type->tp_id }}" {{ (old('type') == $type->tp_id ? "selected":"") }}>{{ $type->tp_type}}</option>
                                     @endforeach
@@ -129,7 +130,7 @@
                             <label for="format" class="col-md-4 col-form-label text-md-right">Format type</label>
    
                             <div class="col-md-6">
-                                <select id="format" data-parent="type" class="sub-type-select form-control @error('format') is-invalid @enderror" name="format" required autocomplete="format">
+                                <select id="format" data-parent="type" class="sub-type-select form-control @error('format') is-invalid @enderror" name="format"  autocomplete="format">
                                     @foreach ($types as $type)
                                     @foreach ($type->subTypes as $stype)
                                     <option value="{{ $stype->tp_id}}" {{ (old('format') == $stype->tp_id ? "selected":"") }} class="@if (old('type', $types[0]->tp_id)!=$type->tp_id) d-none @endif" parent-type="{{ $type->tp_id }}">{{ $stype->tp_type}}</option>
@@ -171,7 +172,78 @@
                                 @enderror
                             </div>
                         </div>
-                        
+                        </fieldset>
+<!------------------------------------------------------------------------------------------------------->
+                        <fieldset id='CAD0000007'>
+                        <div class="form-group row">
+                            <label for="source" class="col-md-4 col-form-label text-md-right">Alternative source</label>
+   
+                            <div class="col-md-6">
+                                <select id="source" class="type-select form-control @error('source') is-invalid @enderror" 
+                                        name="source" value="{{ old('source') }}" autocomplete="source" autofocus 
+                                        >
+                                    @foreach ($sources as $source)
+                                    <option value="{{ $source->so_id }}" {{ (old('source') == $source->so_id ? "selected":"") }}>{{ $source->so_name}}</option>
+                                    @endforeach
+                                </select>
+
+                                @error('source')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="dataset" class="col-md-4 col-form-label text-md-right">Alternative data set</label>
+   
+                            <div class="col-md-6">
+                                <select id="dataset" data-parent="source" class="type-select sub-type-select form-control @error('dataset') is-invalid @enderror" 
+                                        name="dataset"  autocomplete="dataset" 
+                                         >
+                                    @foreach ($sources as $source)
+                                    @foreach ($source->dataSets()->whereNull('ds_deleted')->orderBy('ds_name')->get() as $dataset)
+                                    <option value="{{ $dataset->ds_id}}" {{ (old('dataset') == $dataset->ds_id ? "selected":"") }} class="@if (old('source', $sources[0]->so_id)!=$source->so_id) d-none @endif" parent-type="{{ $source->so_id }}">{{ $dataset->ds_name}}</option>
+                                    @endforeach
+                                    @endforeach
+                                </select>
+
+                                @error('dataset')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="dataitem" class="col-md-4 col-form-label text-md-right">Data item</label>
+   
+                            <div class="col-md-6">
+                                <select id="dataitem" data-parent="dataset" class="sub-type-select form-control @error('dataitem') is-invalid @enderror" 
+                                        name="dataitem"  autocomplete="dataitem" 
+                                        @isset($item) disabled @endisset>
+                                    @foreach ($sources as $source)
+                                    @foreach ($source->dataSets()->whereNull('ds_deleted')
+                                        ->orderBy('ds_name')->get() as $dataset)
+                                    @foreach ($dataset->dataItems()->whereNull('di_deleted')
+                                        ->where('di_id','<>',$object['object']->getID())->orderBy('di_name')->get() as $dataitem)
+                                    <option value="{{ $dataitem->di_id}}" {{ (old('dataitem') == $dataitem->di_id ? "selected":"") }} class="@if (old('dataitem', $sources[0]->dataSets[0]->ds_id)!=$dataset->ds_id) d-none @endif" parent-type="{{ $dataset->ds_id }}">{{ $dataitem->di_name}}</option>
+                                    @endforeach
+                                    @endforeach
+                                    @endforeach
+                                </select>
+
+                                @error('dataitem')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+                        </fieldset>
+<!------------------------------------------------------------------------------------------------------->
                         <div class="form-group row mb-0">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary">
@@ -179,7 +251,7 @@
                                 </button>
                             </div>
                         </div>                        
-                        
+
                     </form>                    
                 </div>
             </div>
@@ -201,6 +273,19 @@
     checkFormat();
     
     $('#format').on('change', checkFormat);
-
+    
+    function checkType () {
+        $('fieldset').hide();
+        if ($('#dtype option:selected').val() == 'CAD0000001') {  
+            $('#CAD0000001').show();            
+        } 
+        if ($('#dtype option:selected').val() == 'CAD0000007') {
+            $('#CAD0000007').show(); 
+        } 
+    }
+    
+    checkType();
+    $('#dtype').on('change', checkType);
+    
 </script>
 @endsection
