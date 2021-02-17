@@ -395,13 +395,13 @@ create or replace package body change_adaptation as
   end create_change_adaptation_proc;
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  procedure add_dataset_example(in_change_id in change.ch_id%type,
+  procedure add_additional_data(in_change_id in change.ch_id%type,
                                 in_data_type in types.tp_id%type,
                                 in_data      in changeadaptationadditionaldata.caad_data%type) is
 
   begin
     insert into changeadaptationadditionaldata values (CHANGEADAPTADDITIONALDATA_SQ.nextval, in_data_type, in_change_id, in_data);
-  end add_dataset_example;
+  end add_additional_data;
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   function dataset_example_added(in_change_id in change.ch_id%type) return boolean is
@@ -980,9 +980,30 @@ create or replace package body change_adaptation as
 
 ---- Set alternative data items ------------------------------------------------------------------------------------------------------------------------------------------------------------
   procedure set_alternative_data_items(in_change_id in change.ch_id%type) is
-
+    v_change change%rowtype;
+    v_mp_id mapping.mp_id%type;
   begin
-   null; -- to be implemented
+    select * into v_change from change where ch_id=in_change_id;
+    if v_change.ch_dataitem_id is not null then
+      for v_map in (select * 
+        from mappingorigin join mapping on mp_id = ms_mapping_id
+        where ms_origin_dataitem_id=v_change.ch_dataitem_id) loop
+          update mapping set mp_deleted = sysdate where mp_id=v_map.mp_id;
+          
+          for v_add in (select * 
+            from changeadaptationadditionaldata 
+            where caad_change_id=in_change_id and caad_data_type_id=CONST_ALTERNATIVE_DATAIEMS) loop
+              select mapping_mp_id_seq.nextval into v_mp_id from dual;
+              
+              insert into mapping (mp_id, mp_target_dataitem_id, mp_operation, mp_created)
+                values (v_mp_id, v_map.mp_target_dataitem_id, v_map.mp_operation, sysdate);
+                
+              insert into mappingorigin 
+                (select v_mp_id, decode(ms_origin_dataitem_id,v_change.ch_dataitem_id, to_number(v_add.caad_data), ms_origin_dataitem_id), ms_order 
+                from mappingorigin where ms_mapping_id=v_map.mp_id);
+          end loop;
+      end loop;
+    end if;
   end set_alternative_data_items;
   
 ---- Skip dependent data items ------------------------------------------------------------------------------------------------------------------------------------------------------------
