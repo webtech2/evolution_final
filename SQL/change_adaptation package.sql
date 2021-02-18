@@ -1028,10 +1028,59 @@ create or replace package body change_adaptation as
   
 ---- Replace dependent data items ---------------------------------------------------------------------------------------------------------------------------------------------------------
   procedure replace_dependent_dataitems(in_change_id in change.ch_id%type) is
-
+    v_di_id dataitem.di_id%type;
+    v_mp_id mapping.mp_id%type;
+    v_maxorder mappingorigin.ms_order%type;
+    v_oper mapping.mp_operation%type;
+    v_origoper mapping.mp_operation%type;
   begin
-  
-   null; -- to be implemented
+    select ch_dataitem_id into v_di_id
+      from change
+      where ch_id = in_change_id;
+    -- get mappings for data items dependent on the changed dataitem
+    for v_dep_map in (select distinct m.* 
+        from mappingorigin join mapping m on mp_id = ms_mapping_id
+        where ms_origin_dataitem_id=v_di_id) loop
+          -- set dependent mappings as deleted
+          update mapping set mp_deleted = sysdate where mp_id=v_dep_map.mp_id;
+          -- get mappings of the changed data item
+          for v_orig in (select * 
+            from mapping 
+            where mp_target_dataitem_id=v_di_id) loop
+              -- get max order of parts of the dependent mapping
+              select max(ms_order) into v_maxorder 
+                from mappingorigin where ms_mapping_id=v_dep_map.mp_id;
+              -- create new mapping that would correspond to the dependent mapping
+              select mapping_mp_id_seq.nextval into v_mp_id from dual;
+              v_oper:=v_dep_map.mp_operation;
+              insert into mapping (mp_id, mp_target_dataitem_id, mp_operation, mp_created)
+                values (v_mp_id, v_dep_map.mp_target_dataitem_id, v_oper, sysdate);
+              -- get mapping origins for the dependent mapping
+              for v_maporig in (select * 
+                from mappingorigin 
+                where ms_mapping_id=v_dep_map.mp_id
+                order by ms_order) loop
+                -- if origin is the changed data item
+                if v_maporig.ms_origin_dataitem_id=v_di_id then
+                  v_origoper:=v_orig.mp_operation;
+                  -- get parts of the mapping of the changed data items
+                  for v_origorig in (select *
+                    from mappingorigin 
+                    where ms_mapping_id=v_orig.mp_id
+                    order by ms_order) loop
+                      
+                      insert into mappingorigin values (v_mp_id, v_origorig.ms_origin_dataitem_id, v_origorig.ms_order+v_maxorder);
+                      v_origoper:=replace(v_origoper,'?'||v_origorig.ms_order||'?','?'||(v_origorig.ms_order+v_maxorder)||'?');
+                  end loop;
+                  -- replace formula to incorporate formula from the mapping of the changed data item
+                  v_oper:=replace(v_oper,'?'||v_maporig.ms_order||'?','('||v_origoper||')');
+                else -- other data items
+                  insert into mappingorigin values (v_mp_id, v_maporig.ms_origin_dataitem_id, v_maporig.ms_order);
+                end if;
+              end loop;
+              update mapping set mp_operation=v_oper where mp_id=v_mp_id;
+          end loop;
+    end loop;
   end replace_dependent_dataitems;
 ---------------------------------------------------------------------------------------------------------------------------------------------------------  
   procedure rename_dataitem(in_change_id in change.ch_id%type) is
