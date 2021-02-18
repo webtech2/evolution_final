@@ -115,8 +115,10 @@ class DataSetController extends Controller
         $stmt->bindParam(':P_FREQ', $temp['frequency']);
         $stmt->bindParam(':P_USERMAIL', $mail);
         $stmt->bindParam(':P_ROLE_ID', $temp['role']);
-        $stmt->execute();               
-        return $request;
+        $stmt->execute();   
+        $id = DB::select('select dataset_ds_id_seq.currval as ds_id from dual')[0]->ds_id; 
+        return redirect()->action('DataSetController@show', $id)->withSuccess('Data set added!');
+
     }
 
     /**

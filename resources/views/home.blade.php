@@ -16,12 +16,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @foreach ( $sources as $source )
-                        <tr class="collapse show source">
-                            <td><a href="{{ action('SourceController@show', $source->so_id) }}">{{ $source->so_name }}</a></td>
-                            <td><a href="{{ action('SourceController@show', $source->so_id) }}">{{$source->so_description}}</a></td>
-                        </tr>
-                    @endforeach                    
+                        @each ('partials.source', $sources, 'source' )
                     </tbody>
                     </table>
                 </div>

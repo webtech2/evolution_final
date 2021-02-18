@@ -109,7 +109,7 @@ class AdaptationController extends Controller
         $types = Type::where('tp_parenttype_id','DST0000000')
                 ->where('tp_id','<>','FMT0000000')->get();
         $velocities = Type::where('tp_parenttype_id','VLT0000000')->get();
-        $sources = DataSource::all();
+        $sources = DataSource::whereNull('so_deleted')->orderBy('so_name')->get();
         return view('changes.add_data', compact('change','object','dtypes','types','velocities','sources'));
     }  
     
@@ -210,6 +210,33 @@ class AdaptationController extends Controller
                 ]); 
                 
                 $data = $request->dataitem;
+                
+                $insert = true;
+                break;
+//-------------------------------------------------------------------------------------                
+            case 'CAD0000006':
+                $validatedData = $request->validate([
+                    'change' => [
+                        'required',
+                        'exists:change,ch_id',
+                    ],
+                    'type' => [
+                        'required',
+                        'exists:types,tp_id',
+                        'starts_with:CAD',
+                    ],
+                    'item' => [
+                        'required',
+                        'exists:dataitem,di_id',
+                    ],
+                    'operation' => [
+                        'required',
+                    ],
+
+                ]); 
+                
+                $data = 'Data item: '.$request->item;
+                $data .= '; Operation: '.$request->operation;
                 
                 $insert = true;
                 break;

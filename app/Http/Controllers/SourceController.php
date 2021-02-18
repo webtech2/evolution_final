@@ -127,6 +127,21 @@ class SourceController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $source = DataSource::find($id);
+        $source->so_deleted = Carbon::now();       
+        $source->save();      
+
+        $user = Auth::user();
+        $author = $user->getAuthor();
+
+        $change = new Change();
+        $change->ch_id = DB::select('select CHANGE_CH_ID_SEQ.nextval as ch_id from dual')[0]->ch_id; 
+        $change->ch_changetype_id = DB::select("select tp_id from types where tp_type='Deletion'")[0]->tp_id;
+        $change->ch_statustype_id = DB::select("select tp_id from types where tp_type='New'")[0]->tp_id;
+        $change->dataSource()->associate($source);
+        $change->author()->associate($author);
+        $change->ch_datetime = Carbon::now();
+        $change->save();
+        return redirect()->action('HomeController@index')->withSuccess('Data source deleted!');;;
     }
 }

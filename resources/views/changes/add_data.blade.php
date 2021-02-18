@@ -244,6 +244,99 @@
                         </div>
                         </fieldset>
 <!------------------------------------------------------------------------------------------------------->
+                        <fieldset id='CAD0000006'>
+                        <div class="form-group row">
+                            <label for="item" class="col-md-4 col-form-label text-md-right">Alternative source for a data item</label>
+   
+                            <div class="col-md-6">
+                                <select id="item" class="type-select form-control @error('item') is-invalid @enderror" 
+                                        name="item" value="{{ old('item') }}" autocomplete="item" autofocus 
+                                        >                            
+                                    @foreach ($change->dataSource->dataSets()->whereNull('ds_deleted')
+                                        ->orderBy('ds_name')->get() as $dataset)
+                                    @foreach ($dataset->dataItems()->whereNull('di_deleted')
+                                        ->orderBy('di_name')->get() as $dataitem)
+                                    <option value="{{ $dataitem->di_id}}" {{ (old('item') == $dataitem->di_id ? "selected":"") }}>
+                                        {{ $dataset->ds_name}}.{{ $dataitem->di_name}}
+                                    </option>
+                                    @endforeach
+                                    @endforeach
+                                </select>
+
+                                @error('item')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>                                    
+
+                        <div class="form-group row">
+                            <label for="operation" class="col-md-4 col-form-label text-md-right">Operation</label>
+
+                            <div class="col-md-6">
+                                <textarea id="operation" rows="5" class="form-control @error('operation') is-invalid @enderror" 
+                                          name="operation" autocomplete="operation">{{ old('operation') }}</textarea>
+
+                                @error('operation')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label for="sources" class="col-md-4 col-form-label text-md-right">Origin source</label>
+   
+                            <div class="col-md-6">
+                                <select id="sources" class="type-select form-control" autocomplete="sources" autofocus >
+                                    @foreach ($sources as $source)
+                                    <option value="s{{ $source->so_id }}">{{ $source->so_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="origdataset" class="col-md-4 col-form-label text-md-right">Origin data set</label>
+   
+                            <div class="col-md-6">
+                                <select id="origdataset" data-parent="sources" class="type-select sub-type-select form-control 
+                                        autocomplete="origdataset">
+                                    @foreach ($sources as $source)
+                                    @foreach ($source->dataSets()->whereNull('ds_deleted')->orderBy('ds_name')->get() as $dataset)
+                                    <option value="{{ $dataset->ds_id}}" class="@if (old('dhls', 's'.$sources[0]->so_id)!='s'.$source->so_id) d-none @endif" parent-type="s{{ $source->so_id }}">{{ $dataset->ds_name}}</option>
+                                    @endforeach
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="origdataitem" class="col-md-4 col-form-label text-md-right">Origin data item</label>
+   
+                            <div class="col-md-6">
+                                <select id="origdataitem" data-parent="origdataset" class="sub-type-select form-control"
+                                        autocomplete="origdataitem">
+                                    @foreach ($sources as $source)
+                                    @foreach ($source->dataSets()->whereNull('ds_deleted')->orderBy('ds_name')->get() as $dataset)
+                                    @foreach ($dataset->dataItems()->whereNull('di_deleted')->orderBy('di_name')->get() as $dataitem)
+                                    <option value="{{ $dataitem->di_id}}" class="@if (old('origdataitem', $sources[0]->dataSets[0]->ds_id)!=$dataset->ds_id) d-none @endif" parent-type="{{ $dataset->ds_id }}">{{ $dataitem->di_name}}</option>
+                                    @endforeach
+                                    @endforeach
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-0">
+                            <div class="col-md-6 offset-md-4">
+                                <button id="pastebtn" type="button" class="btn btn-secondary">
+                                    Paste
+                                </button>
+                            </div>
+                        </div>                        
+                            
+                        </fieldset>
+<!------------------------------------------------------------------------------------------------------->
                         <div class="form-group row mb-0">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary">
@@ -276,16 +369,25 @@
     
     function checkType () {
         $('fieldset').hide();
-        if ($('#dtype option:selected').val() == 'CAD0000001') {  
-            $('#CAD0000001').show();            
-        } 
-        if ($('#dtype option:selected').val() == 'CAD0000007') {
-            $('#CAD0000007').show(); 
-        } 
+        $('#'+$('#dtype option:selected').val()).show();            
     }
     
     checkType();
+    
     $('#dtype').on('change', checkType);
     
+    $('#pastebtn').on('click', function(event) {
+        var cursorPosition = $('#operation').prop("selectionStart");
+        var dataitem = '[?'+$("#dhls option:selected").text()+'.'+
+                $("#origdataset option:selected").text()+'.'+
+                $("#origdataitem option:selected").text()+'['+
+                $("#origdataitem").val()+']?]';
+        
+        var v = $('#operation').val();
+        var textBefore = v.substring(0,  cursorPosition);
+        var textAfter  = v.substring(cursorPosition, v.length);
+
+        $('#operation').val(textBefore + dataitem + textAfter);
+    });    
 </script>
 @endsection
