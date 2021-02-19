@@ -499,14 +499,30 @@ create or replace package body change_adaptation as
     return v_fulfilled;    
   end related_datasets_sources_not;  
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  function dataset_from (in_change_id in change.ch_id%type) return varchar2 is
+  
+    v_type varchar2(20);
+  begin
+    select decode(ds_datasource_id, null, decode(ds_datahighwaylevel_id, null, null, CONST_DATA_HIGHWAY_LVL), CONST_DATA_SOURCE)
+      into v_type
+      from change ch 
+    join dataset ds on ds_id=ch_dataset_id
+    where ch_id=in_change_id;
+
+    return v_type;    
+  end dataset_from;
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   function deleted_dataset_from_source (in_change_id in change.ch_id%type) return boolean is
   
     v_type varchar2(20);
     v_fulfilled boolean default false;
   begin
-    
+    v_type := dataset_from(in_change_id);
+    if v_type = CONST_DATA_SOURCE then
+      v_fulfilled := true;    
+    end if;
 
-    return v_fulfilled;    
+    return v_fulfilled;   
   end deleted_dataset_from_source;   
   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -515,7 +531,10 @@ create or replace package body change_adaptation as
     v_type varchar2(20);
     v_fulfilled boolean default false;
   begin
-    
+    v_type := dataset_from(in_change_id);
+    if v_type = CONST_DATA_HIGHWAY_LVL then
+      v_fulfilled := true;    
+    end if;
 
     return v_fulfilled;    
   end deleted_dataset_from_dhlevel;    

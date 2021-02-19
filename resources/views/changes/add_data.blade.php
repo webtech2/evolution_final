@@ -251,7 +251,8 @@
                             <div class="col-md-6">
                                 <select id="item" class="type-select form-control @error('item') is-invalid @enderror" 
                                         name="item" value="{{ old('item') }}" autocomplete="item" autofocus 
-                                        >                            
+                                        >
+                                    @if ($change->dataSource)
                                     @foreach ($change->dataSource->dataSets()->whereNull('ds_deleted')
                                         ->orderBy('ds_name')->get() as $dataset)
                                     @foreach ($dataset->dataItems()->whereNull('di_deleted')
@@ -261,6 +262,15 @@
                                     </option>
                                     @endforeach
                                     @endforeach
+                                    @endif
+                                    @if ($change->dataSet)
+                                    @foreach ($change->dataSet->dataItems()->whereNull('di_deleted')
+                                        ->orderBy('di_name')->get() as $dataitem)
+                                    <option value="{{ $dataitem->di_id}}" {{ (old('item') == $dataitem->di_id ? "selected":"") }}>
+                                        {{ $change->dataSet->ds_name}}.{{ $dataitem->di_name}}
+                                    </option>
+                                    @endforeach
+                                    @endif
                                 </select>
 
                                 @error('item')
