@@ -5,7 +5,9 @@
 CREATE OR REPLACE 
 PACKAGE HELPERS AS 
 
+  TYPE t_dataitem_tab IS TABLE OF dataitem.di_id%type index by binary_integer;
   function get_value_from_str (p_string in varchar2, p_search in varchar2, p_cs in boolean default false) return varchar2;
+  function get_operation (p_oper in out varchar2) return t_dataitem_tab;
 
 END HELPERS;
 /
@@ -40,6 +42,25 @@ PACKAGE BODY HELPERS AS
       return null;
     end if;
   end get_value_from_str;
+
+  function get_operation (p_oper in out varchar2) return t_dataitem_tab
+  as
+    v_origins t_dataitem_tab;
+    v_oper mapping.mp_operation%type := p_oper;
+    v_part varchar2(1000);    
+    v_order number(10):=0;
+  begin
+    while regexp_instr(v_oper, '\[\?(.+?)\?\]')>0 loop
+      v_part:=regexp_substr(v_oper, '\[\?(.+?)\?\]');
+      v_oper:=replace(v_oper,v_part,'?'||v_order||'?');
+      v_part:=regexp_substr(v_part,'\[\d+?\]');
+      v_part:=substr(v_part,2,length(v_part)-2);
+      v_origins(v_order+1):=v_part;
+      v_order:=v_order+1;
+    end loop;
+    p_oper:=v_oper;
+    return v_origins;
+  end get_operation;
 
 END HELPERS;
 /

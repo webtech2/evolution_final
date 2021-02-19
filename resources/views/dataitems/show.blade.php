@@ -19,6 +19,7 @@
                 @endif
                 <p class="card-text">Changed: {{ $item->lastChanged() }}</p>
                 </div>
+                @if ($item->dataSet->dataSource)
                 <div class="card">
                 <div data-toggle="collapse" data-target=".prop" class="card-header font-weight-bold">Mappings | 
                     <a href="{{action('MappingController@createForDataItem', ['id' => $item->di_id])}}">Create new<a></div>
@@ -38,6 +39,7 @@
                 </div>
                 @endif
                 </div> 
+                @endif
                 <div class="card">
                 <div data-toggle="collapse" data-target=".prop" class="card-header font-weight-bold">Properties | 
                     <a href="{{action('PropertyController@createForDataItem', ['id' => $item->di_id])}}">Create new<a></div>

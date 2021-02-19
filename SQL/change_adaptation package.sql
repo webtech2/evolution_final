@@ -613,13 +613,22 @@ create or replace package body change_adaptation as
   end dataitem_example_added;   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   function alternative_data_sources_added (in_change_id in change.ch_id%type) return boolean is
-  
-    v_type varchar2(20);
-    v_fulfilled boolean default false;
+    v_added_count number;
+    v_is_added boolean default false;
   begin
-    
+    select count(1)
+      into v_added_count
+      from changeadaptationadditionaldata caad
+     where caad.caad_change_id = in_change_id
+     and caad.caad_data_type_id=CONST_ALTERNATIVE_DATASOURCES;
 
-    return v_fulfilled;    
+    if v_added_count > 0 then
+      v_is_added := true;    
+    end if;
+
+      dbms_output.put_line('in function alternative data items added');
+
+    return v_is_added;   
   end alternative_data_sources_added;  
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   function alternative_data_items_added (in_change_id in change.ch_id%type) return boolean is
@@ -1005,11 +1014,72 @@ create or replace package body change_adaptation as
       end loop;
     end if;
   end set_alternative_data_items;
+
+  procedure replace_data_items_with_altern (in_change_id in change.ch_id%type) is
+    v_di_id dataitem.di_id%type;
+    v_maxorder mappingorigin.ms_order%type;
+    v_mp_id mapping.mp_id%type;
+    v_oper mapping.mp_operation%type;
+    v_origoper mapping.mp_operation%type;
+    v_origins HELPERS.t_dataitem_tab;
+    v_add_oper mapping.mp_operation%type;
+    i number(5);
+  begin
+    for v_data in (select *
+      from changeadaptationadditionaldata
+      where caad_change_id=in_change_id
+      and caad_data_type_id='CAD0000006') loop
+      -- get source data item that can be replaced
+      v_di_id:=helpers.get_value_from_str(v_data.caad_data, 'Data item');
+      -- get operation
+      v_add_oper:=helpers.get_value_from_str(v_data.caad_data, 'Operation');
+      -- get data items participating in the operation
+      v_origins:=helpers.get_operation(v_add_oper);
+      -- get mappings for data items that depend on the replaced data item
+      for v_dep_map in (select distinct m.* 
+        from mapping m join mappingorigin on mp_id = ms_mapping_id
+        where ms_origin_dataitem_id=v_di_id) loop
+        -- set dependent mappings as deleted
+        update mapping set mp_deleted = sysdate where mp_id=v_dep_map.mp_id;
+        -- get max order of parts of the dependent mapping
+        select max(ms_order) into v_maxorder 
+          from mappingorigin where ms_mapping_id=v_dep_map.mp_id;
+        -- create new mapping that would correspond to the dependent mapping
+        select mapping_mp_id_seq.nextval into v_mp_id from dual;
+        v_oper:=v_dep_map.mp_operation;
+        insert into mapping (mp_id, mp_target_dataitem_id, mp_operation, mp_created)
+          values (v_mp_id, v_dep_map.mp_target_dataitem_id, v_oper, sysdate);
+        -- get mapping origins for the dependent mapping
+        for v_maporig in (select * 
+          from mappingorigin 
+          where ms_mapping_id=v_dep_map.mp_id
+          order by ms_order) loop
+          -- if origin is the source data item to be replaced
+          if v_maporig.ms_origin_dataitem_id=v_di_id then
+            v_origoper:=v_add_oper;
+            -- for all parts of the mapping of the replaced data item
+            for i in v_origins.first..v_origins.last loop
+              -- create mapping origin
+              insert into mappingorigin values (v_mp_id, v_origins(i), i-1+v_maxorder);
+              v_origoper:=replace(v_origoper,'?'||(i-1)||'?','?'||(i-1+v_maxorder)||'?');
+            end loop;
+            -- replace formula to incorporate formula from the mapping of the replaced data item
+            v_oper:=replace(v_oper,'?'||v_maporig.ms_order||'?','('||v_origoper||')');
+          else -- other data items
+            insert into mappingorigin values (v_mp_id, v_maporig.ms_origin_dataitem_id, v_maporig.ms_order);
+          end if;
+        end loop;
+        update mapping set mp_operation=v_oper where mp_id=v_mp_id;
+      end loop;
+    end loop;
+  end replace_data_items_with_altern;
   
 ---- Skip dependent data items ------------------------------------------------------------------------------------------------------------------------------------------------------------
   procedure skip_dependent_dataitems(in_change_id in change.ch_id%type) is
     v_di_id dataitem.di_id%type;
   begin
+    replace_data_items_with_altern (in_change_id);
+    
     select ch_dataitem_id into v_di_id
       from change
       where ch_id = in_change_id;

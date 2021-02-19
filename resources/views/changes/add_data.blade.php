@@ -378,7 +378,7 @@
     
     $('#pastebtn').on('click', function(event) {
         var cursorPosition = $('#operation').prop("selectionStart");
-        var dataitem = '[?'+$("#dhls option:selected").text()+'.'+
+        var dataitem = '[?'+$("#source option:selected").text()+'.'+
                 $("#origdataset option:selected").text()+'.'+
                 $("#origdataitem option:selected").text()+'['+
                 $("#origdataitem").val()+']?]';
