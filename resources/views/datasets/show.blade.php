@@ -38,7 +38,7 @@
                 </div>
                 <div class="card">
                 <div class="card-header font-weight-bold">Schema: Data Items</div>
-                <div class="card-text">
+                <div class="card-text" id="jstree">
                     @if ($dset->formatType->tp_type == 'XML')
                     <ul>
                         @each('partials.dataitem_tree', $dset->topDataItems, 'item')
@@ -117,4 +117,26 @@
         </div>
     </div>
 </div>
+<script>
+$(function () { 
+    $('#jstree').jstree({
+    "conditionalselect" : function (node, event) {
+      return false;
+    },
+    "types" : {
+      "element" : {
+        "icon" : "far fa-file-code"
+      },
+      "attribute" : {
+        "icon" : "fas fa-check"
+      }
+    },
+    "plugins" : [  "types"]
+  }); 
+  
+  $('#jstree').bind('select_node.jstree', function(e,data) { 
+     window.location.href = data.node.a_attr.href; 
+});
+});    
+</script>    
 @endsection

@@ -1,7 +1,8 @@
 @if (!($item->di_deleted))
-    <li><a href="{{ url('dataitem', $item->di_id) }}">
+    <li data-jstree='{ "opened" : true, "type" : @if ($item->itemType->tp_type=="Element") "element" @else "attribute" @endif}' >
+        <a href="{{ url('dataitem', $item->di_id) }}">
         {{ $item->di_name }} : {{ $item->itemType->tp_type}} : {{ $item->di_id }}
-    </a></li>
+        </a>
 	@if (count($item->relationships) > 0)
 	    <ul>
 	    @foreach($item->relationships as $rel)
@@ -11,4 +12,5 @@
 	    @endforeach
 	    </ul>
 	@endif
+    </li>
 @endif        
